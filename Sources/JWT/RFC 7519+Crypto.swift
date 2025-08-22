@@ -132,100 +132,125 @@ extension RFC_7519.JWT {
 // MARK: - Signing Algorithms with swift-crypto
 
 /// Represents a JWT signing algorithm with swift-crypto implementation
-public enum SigningAlgorithm {
-    case hmacSHA256
-    case hmacSHA384
-    case hmacSHA512
-    case ecdsaSHA256
-    case none
-    
+public struct SigningAlgorithm: Sendable {
     /// The algorithm name as it appears in the JWT header
-    public var algorithmName: String {
-        switch self {
-        case .hmacSHA256: return "HS256"
-        case .hmacSHA384: return "HS384"
-        case .hmacSHA512: return "HS512"
-        case .ecdsaSHA256: return "ES256"
-        case .none: return "none"
-        }
+    public let algorithmName: String
+    
+    /// Signs data with the specified key
+    public let sign: @Sendable (Data, SigningKey) throws -> Data
+    
+    /// Verifies a signature
+    public let verify: @Sendable (Data, Data, VerificationKey) throws -> Bool
+    
+    /// Creates a custom signing algorithm
+    public init(
+        algorithmName: String,
+        sign: @escaping @Sendable (Data, SigningKey) throws -> Data,
+        verify: @escaping @Sendable (Data, Data, VerificationKey) throws -> Bool
+    ) {
+        self.algorithmName = algorithmName
+        self.sign = sign
+        self.verify = verify
     }
     
-    /// Signs data with the specified key using swift-crypto
-    /// - Parameters:
-    ///   - data: Data to sign
-    ///   - key: Signing key
-    /// - Returns: Signature data
-    /// - Throws: `Error` if signing fails
-    func sign(data: Data, with key: SigningKey) throws -> Data {
-        switch self {
-        case .hmacSHA256:
-            guard case .symmetric(let symmetricKey) = key else {
+    /// Standard HMAC-SHA256 algorithm
+    public static let hmacSHA256 = SigningAlgorithm(
+        algorithmName: "HS256",
+        sign: { data, key in
+            guard let symmetricKey = key._symmetricKey else {
                 throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
             }
             return Data(HMAC<SHA256>.authenticationCode(for: data, using: symmetricKey))
-            
-        case .hmacSHA384:
-            guard case .symmetric(let symmetricKey) = key else {
-                throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
-            }
-            return Data(HMAC<SHA384>.authenticationCode(for: data, using: symmetricKey))
-            
-        case .hmacSHA512:
-            guard case .symmetric(let symmetricKey) = key else {
-                throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
-            }
-            return Data(HMAC<SHA512>.authenticationCode(for: data, using: symmetricKey))
-            
-        case .ecdsaSHA256:
-            guard case .ecdsa(let privateKey) = key else {
-                throw RFC_7519.Error.invalidSignature("ECDSA requires ECDSA private key")
-            }
-            return try privateKey.signature(for: SHA256.hash(data: data)).rawRepresentation
-            
-        case .none:
-            return Data()
-        }
-    }
-    
-    /// Verifies a signature using swift-crypto
-    /// - Parameters:
-    ///   - signature: Signature to verify
-    ///   - data: Original data that was signed
-    ///   - key: Verification key
-    /// - Returns: True if signature is valid
-    /// - Throws: `Error` if verification fails
-    public func verify(signature: Data, for data: Data, with key: VerificationKey) throws -> Bool {
-        switch self {
-        case .hmacSHA256:
-            guard case .symmetric(let symmetricKey) = key else {
+        },
+        verify: { signature, data, key in
+            guard let symmetricKey = key._symmetricKey else {
                 throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
             }
             let expectedSignature = Data(HMAC<SHA256>.authenticationCode(for: data, using: symmetricKey))
             return signature == expectedSignature
-            
-        case .hmacSHA384:
-            guard case .symmetric(let symmetricKey) = key else {
+        }
+    )
+    
+    /// Standard HMAC-SHA384 algorithm
+    public static let hmacSHA384 = SigningAlgorithm(
+        algorithmName: "HS384",
+        sign: { data, key in
+            guard let symmetricKey = key._symmetricKey else {
+                throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
+            }
+            return Data(HMAC<SHA384>.authenticationCode(for: data, using: symmetricKey))
+        },
+        verify: { signature, data, key in
+            guard let symmetricKey = key._symmetricKey else {
                 throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
             }
             let expectedSignature = Data(HMAC<SHA384>.authenticationCode(for: data, using: symmetricKey))
             return signature == expectedSignature
-            
-        case .hmacSHA512:
-            guard case .symmetric(let symmetricKey) = key else {
+        }
+    )
+    
+    /// Standard HMAC-SHA512 algorithm
+    public static let hmacSHA512 = SigningAlgorithm(
+        algorithmName: "HS512",
+        sign: { data, key in
+            guard let symmetricKey = key._symmetricKey else {
+                throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
+            }
+            return Data(HMAC<SHA512>.authenticationCode(for: data, using: symmetricKey))
+        },
+        verify: { signature, data, key in
+            guard let symmetricKey = key._symmetricKey else {
                 throw RFC_7519.Error.invalidSignature("HMAC requires symmetric key")
             }
             let expectedSignature = Data(HMAC<SHA512>.authenticationCode(for: data, using: symmetricKey))
             return signature == expectedSignature
-            
-        case .ecdsaSHA256:
-            guard case .ecdsa(let publicKey) = key else {
+        }
+    )
+    
+    /// Standard ECDSA-SHA256 algorithm
+    public static let ecdsaSHA256 = SigningAlgorithm(
+        algorithmName: "ES256",
+        sign: { data, key in
+            guard let privateKey = key._ecdsaPrivateKey else {
+                throw RFC_7519.Error.invalidSignature("ECDSA requires ECDSA private key")
+            }
+            return try privateKey.signature(for: SHA256.hash(data: data)).rawRepresentation
+        },
+        verify: { signature, data, key in
+            guard let publicKey = key._ecdsaPublicKey else {
                 throw RFC_7519.Error.invalidSignature("ECDSA requires ECDSA public key")
             }
             let ecdsaSignature = try P256.Signing.ECDSASignature(rawRepresentation: signature)
             return publicKey.isValidSignature(ecdsaSignature, for: SHA256.hash(data: data))
-            
-        case .none:
-            return signature.isEmpty
+        }
+    )
+    
+    /// No signature algorithm - WARNING: This provides no security!
+    /// Only use when the JWT is already verified through other means (e.g., secure transport)
+    /// RFC 7518: "none" should only be used in contexts where the JWT is integrity protected by other means
+    public static let none = SigningAlgorithm(
+        algorithmName: "none",
+        sign: { _, _ in Data() },
+        verify: { signature, _, _ in signature.isEmpty }
+    )
+    
+    /// Enum for type-safe standard algorithm selection
+    public enum Standard {
+        case hmacSHA256
+        case hmacSHA384
+        case hmacSHA512
+        case ecdsaSHA256
+        case none
+        
+        /// Gets the corresponding SigningAlgorithm
+        public var algorithm: SigningAlgorithm {
+            switch self {
+            case .hmacSHA256: return .hmacSHA256
+            case .hmacSHA384: return .hmacSHA384
+            case .hmacSHA512: return .hmacSHA512
+            case .ecdsaSHA256: return .ecdsaSHA256
+            case .none: return .none
+            }
         }
     }
 }
@@ -233,74 +258,138 @@ public enum SigningAlgorithm {
 // MARK: - Signing Keys with swift-crypto
 
 /// Represents a key for signing JWTs using swift-crypto
-public enum SigningKey {
-    case symmetric(SymmetricKey)
-    case ecdsa(P256.Signing.PrivateKey)
+public struct SigningKey: Sendable {
+    /// Internal storage for the key
+    private let storage: Storage
+    
+    /// Internal key storage
+    private enum Storage: Sendable {
+        case symmetric(SymmetricKey)
+        case ecdsa(P256.Signing.PrivateKey)
+    }
+    
+    /// Creates a signing key with internal storage
+    private init(storage: Storage) {
+        self.storage = storage
+    }
     
     /// Creates a symmetric key from data
     /// - Parameter data: Key data
     /// - Returns: Signing key
     public static func symmetric(data: Data) -> SigningKey {
-        return .symmetric(SymmetricKey(data: data))
+        return SigningKey(storage: .symmetric(SymmetricKey(data: data)))
     }
     
     /// Creates a symmetric key from string
     /// - Parameter string: Key string (UTF-8 encoded)
     /// - Returns: Signing key
+    /// - Important: For HMAC algorithms, RFC 7518 recommends key length >= hash output length:
+    ///   - HS256: >= 32 bytes (256 bits)
+    ///   - HS384: >= 48 bytes (384 bits)
+    ///   - HS512: >= 64 bytes (512 bits)
     public static func symmetric(string: String) -> SigningKey {
-        return .symmetric(SymmetricKey(data: Data(string.utf8)))
+        return SigningKey(storage: .symmetric(SymmetricKey(data: Data(string.utf8))))
+    }
+    
+    /// Creates an ECDSA signing key
+    /// - Parameter privateKey: ECDSA private key
+    /// - Returns: Signing key
+    public static func ecdsa(_ privateKey: P256.Signing.PrivateKey) -> SigningKey {
+        return SigningKey(storage: .ecdsa(privateKey))
     }
     
     /// Generates a new ECDSA P-256 private key
     /// - Returns: Signing key
     public static func generateECDSA() -> SigningKey {
-        return .ecdsa(P256.Signing.PrivateKey())
+        return SigningKey(storage: .ecdsa(P256.Signing.PrivateKey()))
     }
     
     /// Creates an ECDSA private key from raw representation
     /// - Parameter rawRepresentation: Raw key data
     /// - Returns: Signing key
-    /// - Throws: Error if key is invalid
+    /// - Throws: Swift.Error if key is invalid
     public static func ecdsa(rawRepresentation: Data) throws -> SigningKey {
         let privateKey = try P256.Signing.PrivateKey(rawRepresentation: rawRepresentation)
-        return .ecdsa(privateKey)
+        return SigningKey(storage: .ecdsa(privateKey))
+    }
+    
+    /// Internal access to symmetric key
+    internal var _symmetricKey: SymmetricKey? {
+        guard case .symmetric(let key) = storage else { return nil }
+        return key
+    }
+    
+    /// Internal access to ECDSA private key
+    internal var _ecdsaPrivateKey: P256.Signing.PrivateKey? {
+        guard case .ecdsa(let key) = storage else { return nil }
+        return key
     }
 }
 
 /// Represents a key for verifying JWTs using swift-crypto
-public enum VerificationKey {
-    case symmetric(SymmetricKey)
-    case ecdsa(P256.Signing.PublicKey)
+public struct VerificationKey: Sendable {
+    /// Internal storage for the key
+    private let storage: Storage
+    
+    /// Internal key storage
+    private enum Storage: Sendable {
+        case symmetric(SymmetricKey)
+        case ecdsa(P256.Signing.PublicKey)
+    }
+    
+    /// Creates a verification key with internal storage
+    private init(storage: Storage) {
+        self.storage = storage
+    }
     
     /// Creates a symmetric key from data
     /// - Parameter data: Key data
     /// - Returns: Verification key
     public static func symmetric(data: Data) -> VerificationKey {
-        return .symmetric(SymmetricKey(data: data))
+        return VerificationKey(storage: .symmetric(SymmetricKey(data: data)))
     }
     
     /// Creates a symmetric key from string
     /// - Parameter string: Key string (UTF-8 encoded)
     /// - Returns: Verification key
     public static func symmetric(string: String) -> VerificationKey {
-        return .symmetric(SymmetricKey(data: Data(string.utf8)))
+        return VerificationKey(storage: .symmetric(SymmetricKey(data: Data(string.utf8))))
+    }
+    
+    /// Creates an ECDSA verification key
+    /// - Parameter publicKey: ECDSA public key
+    /// - Returns: Verification key
+    public static func ecdsa(_ publicKey: P256.Signing.PublicKey) -> VerificationKey {
+        return VerificationKey(storage: .ecdsa(publicKey))
     }
     
     /// Creates an ECDSA public key from a signing key
     /// - Parameter signingKey: ECDSA signing key
     /// - Returns: Verification key
     public static func ecdsa(from signingKey: SigningKey) -> VerificationKey? {
-        guard case .ecdsa(let privateKey) = signingKey else { return nil }
-        return .ecdsa(privateKey.publicKey)
+        guard let privateKey = signingKey._ecdsaPrivateKey else { return nil }
+        return VerificationKey(storage: .ecdsa(privateKey.publicKey))
     }
     
     /// Creates an ECDSA public key from raw representation
     /// - Parameter rawRepresentation: Raw key data
     /// - Returns: Verification key
-    /// - Throws: Error if key is invalid
+    /// - Throws: Swift.Error if key is invalid
     public static func ecdsa(rawRepresentation: Data) throws -> VerificationKey {
         let publicKey = try P256.Signing.PublicKey(rawRepresentation: rawRepresentation)
-        return .ecdsa(publicKey)
+        return VerificationKey(storage: .ecdsa(publicKey))
+    }
+    
+    /// Internal access to symmetric key
+    internal var _symmetricKey: SymmetricKey? {
+        guard case .symmetric(let key) = storage else { return nil }
+        return key
+    }
+    
+    /// Internal access to ECDSA public key
+    internal var _ecdsaPublicKey: P256.Signing.PublicKey? {
+        guard case .ecdsa(let key) = storage else { return nil }
+        return key
     }
 }
 
@@ -317,7 +406,7 @@ extension RFC_7519.JWT {
         }
         
         let signingInput = try self.signingInput()
-        return try algorithm.verify(signature: signature, for: signingInput, with: key)
+        return try algorithm.verify(signature, signingInput, key)
     }
     
     /// Verifies the JWT signature and validates timing claims using swift-crypto
@@ -396,13 +485,25 @@ extension RFC_7519.JWT {
             exp = nil
         }
         
-        // Create header
+        // Create header - extract standard header parameters
+        var filteredHeaderParameters = headerParameters
+        
+        // Note: 'alg' is NOT extracted from headerParameters for security reasons
+        // It must always come from the algorithm parameter
+        
+        let typ = filteredHeaderParameters.removeValue(forKey: "typ") as? String ?? "JWT"
+        let cty = filteredHeaderParameters.removeValue(forKey: "cty") as? String
+        let kid = filteredHeaderParameters.removeValue(forKey: "kid") as? String
+        
+        // Additional standard parameters remain in additionalParameters
+        // (jku, jwk, x5u, x5c, x5t, x5t#S256, crit)
+        
         let header = Header(
             alg: algorithm.algorithmName,
-            typ: "JWT",
-            cty: nil,
-            kid: nil,
-            additionalParameters: headerParameters.isEmpty ? nil : headerParameters
+            typ: typ,
+            cty: cty,
+            kid: kid,
+            additionalParameters: filteredHeaderParameters.isEmpty ? nil : filteredHeaderParameters
         )
         
         // Create payload
@@ -424,7 +525,7 @@ extension RFC_7519.JWT {
         let signingInput = try unsignedJWT.signingInput()
         
         // Sign the data
-        let signature = try algorithm.sign(data: signingInput, with: key)
+        let signature = try algorithm.sign(signingInput, key)
         
         // Return signed JWT
         return RFC_7519.JWT(header: header, payload: payload, signature: signature)
