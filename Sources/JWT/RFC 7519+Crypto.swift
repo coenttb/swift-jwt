@@ -7,7 +7,7 @@
 
 import Foundation
 import RFC_7519
-import Crypto
+@preconcurrency import Crypto
 
 // MARK: - JWT Creation with swift-crypto
 
