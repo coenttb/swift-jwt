@@ -251,8 +251,15 @@ The package includes comprehensive tests covering:
 
 ## Related Packages
 
-* [swift-html](https://www.github.com/coenttb/swift-html): The Swift library for domain-accurate and type-safe HTML & CSS.
-* [swift-web](https://www.github.com/coenttb/swift-web): A Swift package with tools to simplify web development.
+### Used By
+
+- [swift-identities-types](https://github.com/coenttb/swift-identities-types): A Swift package with foundational types for authentication.
+- [swift-server-foundation](https://github.com/coenttb/swift-server-foundation): A Swift package with tools to simplify server development.
+- [swift-web-foundation](https://github.com/coenttb/swift-web-foundation): A Swift package with tools to simplify web development.
+
+### Third-Party Dependencies
+
+- [apple/swift-crypto](https://github.com/apple/swift-crypto): Open-source implementation of a substantial portion of the API of Apple CryptoKit.
 
 ## Feedback is Much Appreciated!
   
