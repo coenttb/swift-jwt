@@ -1,15 +1,19 @@
 # swift-jwt
 
-A Swift package for creating, signing, and verifying JSON Web Tokens (JWTs) using Apple's Crypto framework. This package provides a convenient Swift wrapper around RFC 7519 JWT implementation with built-in cryptographic support.
+[![CI](https://github.com/coenttb/swift-jwt/workflows/CI/badge.svg)](https://github.com/coenttb/swift-jwt/actions/workflows/ci.yml)
+![Development Status](https://img.shields.io/badge/status-active--development-blue.svg)
+
+A Swift package for creating, signing, and verifying JSON Web Tokens (JWTs) using Apple's Crypto framework.
 
 ## Features
 
-- **Multiple Signing Algorithms**: HMAC-SHA256/384/512 and ECDSA-SHA256 support
-- **Built on Standards**: Uses `swift-rfc-7519` for RFC compliance and `swift-crypto` for cryptography
-- **Convenience Methods**: Easy-to-use static methods for common JWT operations
-- **Flexible Configuration**: Full control over JWT headers, claims, and timing
-- **Type Safety**: Leverages Swift's type system for secure JWT handling
-- **Comprehensive Validation**: Signature verification with timing validation
+- HMAC-SHA256/384/512 and ECDSA-SHA256 signing algorithms
+- RFC 7519 compliant JWT implementation via `swift-rfc-7519`
+- Apple Crypto framework integration via `swift-crypto`
+- Static methods for HMAC and ECDSA JWT creation
+- JWT header, claims, and timing configuration
+- Type-safe JWT handling via Swift's type system
+- Signature verification with timing validation (exp, nbf, iat)
 
 ## Requirements
 
@@ -92,15 +96,26 @@ let isFullyValid = try jwt.verifyAndValidate(with: verificationKey)
 
 ```swift
 import JWT
+import Crypto
 
-// Create verification key from public key
+// Create verification key from signing key
+let privateKey = P256.Signing.PrivateKey()
 let verificationKey = VerificationKey.ecdsa(from: .ecdsa(privateKey))!
 
-// Or from raw public key data
+// Verify the JWT
+let isValid = try jwt.verifyAndValidate(with: verificationKey)
+```
+
+Alternative - using raw public key data:
+
+```swift
+import JWT
+import Crypto
+
+let privateKey = P256.Signing.PrivateKey()
 let publicKeyData = privateKey.publicKey.rawRepresentation
 let verificationKey = try VerificationKey.ecdsa(rawRepresentation: publicKeyData)
 
-// Verify the JWT
 let isValid = try jwt.verifyAndValidate(with: verificationKey)
 ```
 
@@ -234,23 +249,10 @@ The package includes comprehensive tests covering:
 - Edge cases and error conditions
 - Key management operations
 
-## Related projects
+## Related Packages
 
-### The coenttb stack
-
-* [swift-css](https://www.github.com/coenttb/swift-css): A Swift DSL for type-safe CSS.
-* [swift-html](https://www.github.com/coenttb/swift-html): A Swift DSL for type-safe HTML & CSS, integrating [swift-css](https://www.github.com/coenttb/swift-css) and [pointfree-html](https://www.github.com/coenttb/pointfree-html).
-* [swift-web](https://www.github.com/coenttb/swift-web): Foundational tools for web development in Swift.
-* [coenttb-html](https://www.github.com/coenttb/coenttb-html): Builds on [swift-html](https://www.github.com/coenttb/swift-html), and adds functionality for HTML, Markdown, Email, and printing HTML to PDF.
-* [coenttb-web](https://www.github.com/coenttb/coenttb-web): Builds on [swift-web](https://www.github.com/coenttb/swift-web), and adds functionality for web development.
-* [coenttb-server](https://www.github.com/coenttb/coenttb-server): Build fast, modern, and safe servers that are a joy to write. `coenttb-server` builds on [coenttb-web](https://www.github.com/coenttb/coenttb-web), and adds functionality for server development.
-* [coenttb-vapor](https://www.github.com/coenttb/coenttb-server-vapor): `coenttb-server-vapor` builds on [coenttb-server](https://www.github.com/coenttb/coenttb-server), and adds functionality and integrations with Vapor and Fluent.
-* [coenttb-com-server](https://www.github.com/coenttb/coenttb-com-server): The backend server for coenttb.com, written entirely in Swift and powered by [coenttb-server-vapor](https://www.github.com/coenttb-server-vapor).
-
-### PointFree foundations
-* [coenttb/pointfree-html](https://www.github.com/coenttb/pointfree-html): A Swift DSL for type-safe HTML, forked from [pointfreeco/swift-html](https://www.github.com/pointfreeco/swift-html) and updated to the version on [pointfreeco/pointfreeco](https://github.com/pointfreeco/pointfreeco).
-* [coenttb/pointfree-web](https://www.github.com/coenttb/pointfree-html): Foundational tools for web development in Swift, forked from  [pointfreeco/swift-web](https://www.github.com/pointfreeco/swift-web).
-* [coenttb/pointfree-server](https://www.github.com/coenttb/pointfree-html): Foundational tools for server development in Swift, forked from  [pointfreeco/swift-web](https://www.github.com/pointfreeco/swift-web).
+* [swift-html](https://www.github.com/coenttb/swift-html): The Swift library for domain-accurate and type-safe HTML & CSS.
+* [swift-web](https://www.github.com/coenttb/swift-web): A Swift package with tools to simplify web development.
 
 ## Feedback is Much Appreciated!
   
