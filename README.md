@@ -261,17 +261,9 @@ The package includes comprehensive tests covering:
 
 - [apple/swift-crypto](https://github.com/apple/swift-crypto): Open-source implementation of a substantial portion of the API of Apple CryptoKit.
 
-## Feedback is Much Appreciated!
-  
-If you're working on your own Swift project, feel free to learn, fork, and contribute.
+## Contributing
 
-Got thoughts? Found something you love? Something you hate? Let me know! Your feedback helps make this project better for everyone. Open an issue or start a discussion—I'm all ears.
-
-> [Subscribe to my newsletter](http://coenttb.com/en/newsletter/subscribe)
->
-> [Follow me on X](http://x.com/coenttb)
-> 
-> [Link on Linkedin](https://www.linkedin.com/in/tenthijeboonkkamp)
+Contributions are welcome. Please open an issue or submit a pull request.
 
 ## License
 
